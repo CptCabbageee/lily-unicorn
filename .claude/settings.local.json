@@ -1,0 +1,43 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "Bash(claude mcp *)",
+      "mcp__pixellab__create_map_object",
+      "mcp__pixellab__get_map_object",
+      "Bash(curl --fail -o \"C:/Users/georg/lily-unicorn/assets/tree-small.png\" \"https://api.pixellab.ai/mcp/map-objects/906126ac-d029-4f3b-8412-53cfa03e674a/download\")",
+      "Bash(curl --fail -o \"C:/Users/georg/lily-unicorn/assets/tree-big.png\" \"https://api.pixellab.ai/mcp/map-objects/6fdf27e1-0cf3-420e-9375-4988f1f3d7f5/download\")",
+      "Bash(curl --fail -o \"C:/Users/georg/lily-unicorn/assets/tree-medium.png\" \"https://api.pixellab.ai/mcp/map-objects/6d644b63-5445-4485-bdc0-dbae504846ae/download\")",
+      "Bash(mkdir -p C:/Users/georg/lily-unicorn/public/assets)",
+      "Bash(mv C:/Users/georg/lily-unicorn/assets/poop.png C:/Users/georg/lily-unicorn/public/assets/)",
+      "Bash(mv C:/Users/georg/lily-unicorn/assets/unicorn-run.png C:/Users/georg/lily-unicorn/public/assets/)",
+      "Bash(mv C:/Users/georg/lily-unicorn/assets/tree-small.png C:/Users/georg/lily-unicorn/public/assets/)",
+      "Bash(mv C:/Users/georg/lily-unicorn/assets/tree-medium.png C:/Users/georg/lily-unicorn/public/assets/)",
+      "Read(//c/Users/georg/nudge-mobile/**)",
+      "Read(//c/Users/georg/v0-nudge/**)",
+      "Bash(npx tsc *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173/)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173/assets/tree-small.png)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173/assets/tree-medium.png)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173/assets/tree-big.png)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173/assets/unicorn-run.png)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173/assets/poop.png)",
+      "Bash(node -e \"const pkg = require\\('./node_modules/@supabase/supabase-js/package.json'\\); console.log\\(pkg.version\\)\")",
+      "Bash(curl -s \"https://klobhutxjgtinnnzzgkz.supabase.co/rest/v1/\" -H \"apikey: sb_publishable_IyoFcx05Z8MriqmrCSrhrg_T8Wq8vAC\" -o /dev/null -w \"%{http_code}\\\\n\")",
+      "Bash(node -e ' *)",
+      "Bash(curl --fail -o \"C:/Users/georg/lily-unicorn/public/assets/lily.png\" \"https://api.pixellab.ai/mcp/map-objects/63eae4d7-8d30-4b0e-8a87-360d4807081b/download\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173/assets/lily.png)",
+      "Bash(python3 -c ' *)",
+      "Bash(curl --fail -o \"C:/Users/georg/lily-unicorn/public/assets/lily.png\" \"https://api.pixellab.ai/mcp/map-objects/59bb2857-0385-4839-bb1d-127f01a0965f/download\")",
+      "Bash(curl --fail -o \"C:/Users/georg/lily-unicorn/public/assets/lily.png\" \"https://api.pixellab.ai/mcp/map-objects/1aefbf70-6717-4471-83dc-564bafd9efea/download\")",
+      "Bash(python -c \"from PIL import Image; print\\('Pillow OK'\\)\")",
+      "Bash(python3 -c \"from PIL import Image; print\\('Pillow OK'\\)\")",
+      "Bash(python *)",
+      "Bash(node *)",
+      "Bash(curl --fail -o \"public/assets/splash-poop.png\" \"https://api.pixellab.ai/mcp/map-objects/d5e5d768-5c36-478b-a1eb-a0731f0f7465/download\")",
+      "Bash(dir public\\\\assets\\\\splash*)",
+      "WebSearch"
+    ]
+  }
+}

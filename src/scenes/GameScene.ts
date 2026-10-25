@@ -230,8 +230,8 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setZoom(1.0);
   }
 
-  // Zoom tween removed — camera is static at zoom=1 for stability.
-  // Kept as a no-op so call sites don't need changing.
+  // The camera sits at zoom=1, zooms out in tryJump() so the jump stays in view,
+  // and zooms back to 1 on landing in checkGrounded().
 
   // ─── Setup ────────────────────────────────────────────────────────────────
 
@@ -506,7 +506,10 @@ export class GameScene extends Phaser.Scene {
     this.scrollLandedPoops(dt);
     this.updateCloudLayers(dt);
     this.checkGrounded();
-    this.cameras.main.setScroll(this.cameras.main.scrollX, (this.GROUND_Y + this.GROUND_H) - 540 / this.cameras.main.zoom);
+    // Pin the bottom of the ground to the bottom of the view. Phaser zooms around
+    // the camera's centre, so the visible bottom edge is scrollY + 270 + 270/zoom.
+    const zoom = this.cameras.main.zoom;
+    this.cameras.main.setScroll(this.cameras.main.scrollX, (this.GROUND_Y + this.GROUND_H) - 270 - 270 / zoom);
     // Keep Lily glued to the unicorn's back (saddle ≈ 129 px above unicorn feet at 3× scale)
     this.lily.setPosition(this.unicorn.x + 5, this.unicorn.y - 84);
   }
@@ -731,7 +734,15 @@ export class GameScene extends Phaser.Scene {
   private checkGrounded(): void {
     const body = this.unicorn.body as Phaser.Physics.Arcade.Body;
     if (body.blocked.down && body.velocity.y >= 0) {
-      if (this.isJumping) console.log('[Jump] landing');
+      if (this.isJumping) {
+        console.log('[Jump] landing');
+        // Zoom back in after the jump's zoom-out
+        if (this.currentZoom < 1) {
+          this.currentZoom = 1;
+          this.tweens.killTweensOf(this.cameras.main);
+          this.tweens.add({ targets: this.cameras.main, zoom: 1, duration: 400, ease: 'Sine.easeInOut' });
+        }
+      }
       this.isGrounded = true;
       this.isJumping = false;
       this.jumpPoopFired = false;

@@ -15,7 +15,7 @@ export class LoginScene extends Phaser.Scene {
   }
 
   preload(): void {
-    this.load.image('splash', 'assets/splash-new.png');
+    this.load.image('splash', 'assets/splash-lily.jpg');
     this.load.image('poop',   'assets/poop.png');  // Classic poo, for the poo picker
   }
 

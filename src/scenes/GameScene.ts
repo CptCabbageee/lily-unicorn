@@ -105,6 +105,8 @@ export class GameScene extends Phaser.Scene {
   private readonly GROUND_Y = 508;
   private readonly GROUND_H = 32;
   private readonly TILE_W = 64;
+  // At zoom 0.35 the view reaches 480/0.35 - 480 ≈ 892 px past each edge
+  private readonly GROUND_MARGIN = 960;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -254,10 +256,12 @@ export class GameScene extends Phaser.Scene {
   private createGround(): void {
     this.groundGroup = this.physics.add.staticGroup();
     this.groundTiles = [];
-    const tilesNeeded = Math.ceil(960 / this.TILE_W) + 2;
+    // Extend past both screen edges so the floor still fills the view when the
+    // jump zoom-out (down to 0.35) widens it.
+    const tilesNeeded = Math.ceil((960 + 2 * this.GROUND_MARGIN) / this.TILE_W) + 2;
     for (let i = 0; i < tilesNeeded; i++) {
       const tile = this.groundGroup.create(
-        i * this.TILE_W + this.TILE_W / 2,
+        -this.GROUND_MARGIN + i * this.TILE_W + this.TILE_W / 2,
         this.GROUND_Y + this.GROUND_H / 2,
         'ground'
       ) as Phaser.Physics.Arcade.Image;
@@ -543,7 +547,7 @@ export class GameScene extends Phaser.Scene {
 
   private recycleGround(): void {
     for (const tile of this.groundTiles) {
-      if (tile.x < -this.TILE_W) {
+      if (tile.x < -this.GROUND_MARGIN - this.TILE_W) {
         const rightEdge = Math.max(...this.groundTiles.map(t => t.x));
         tile.x = rightEdge + this.TILE_W;
         (tile.body as Phaser.Physics.Arcade.StaticBody).reset(tile.x, tile.y);
@@ -991,7 +995,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   private spawnRainbow(x: number, groundY: number): void {
-    const rainbowColors = [0xcc00ee, 0x4422cc, 0x0088ff, 0x00cc00, 0xffee00, 0xff8800, 0xff0000];
+    // Red on the outside, violet on the inside, like a real rainbow
+    const rainbowColors = [0xff0000, 0xff8800, 0xffee00, 0x00cc00, 0x0088ff, 0x4422cc, 0xcc00ee];
     const outerR = 130;
     const lineW  = 7;
 
@@ -1003,7 +1008,9 @@ export class GameScene extends Phaser.Scene {
       const r = outerR - i * lineW;
       g.lineStyle(lineW + 1, color, 0.92);
       g.beginPath();
-      g.arc(0, 0, r, Math.PI, 0, true); // upper semicircle (left → top → right)
+      // Upper semicircle (left → top → right). y points down, so going clockwise
+      // from π passes 3π/2, the top; anticlockwise went through the bottom.
+      g.arc(0, 0, r, Math.PI, 2 * Math.PI, false);
       g.strokePath();
     });
 

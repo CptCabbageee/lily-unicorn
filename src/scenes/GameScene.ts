@@ -1008,49 +1008,45 @@ export class GameScene extends Phaser.Scene {
       g.strokePath();
     });
 
-    // Cloud at the apex of the arc
-    const cloudG = this.add.graphics();
-    cloudG.setDepth(4).setPosition(x, groundY - outerR).setAlpha(0).setScale(0);
-    this.uiCamera?.ignore(cloudG);
-    cloudG.fillStyle(0xffffff, 0.92);
-    cloudG.fillEllipse(0, 0, 80, 40);
-    cloudG.fillEllipse(-24, -14, 50, 34);
-    cloudG.fillEllipse(26, -12, 56, 30);
-    cloudG.fillEllipse(0, -20, 48, 34);
+    // A cloud over each end of the arc hides the hard cut-off edges. The clouds
+    // are their own layer above the arc: they pop in and rise with it, but stay
+    // fully solid until the arc has faded, so its ends never show through.
+    const clouds = this.add.graphics();
+    clouds.setDepth(4).setPosition(x, groundY).setScale(0);
+    this.uiCamera?.ignore(clouds);
+    const endX = outerR - (rainbowColors.length * lineW) / 2;
+    [-endX, endX].forEach(cx => {
+      clouds.fillStyle(0xffffff, 1);
+      clouds.fillEllipse(cx, -6, 84, 40);
+      clouds.fillEllipse(cx - 24, -20, 50, 34);
+      clouds.fillEllipse(cx + 24, -18, 56, 30);
+      clouds.fillEllipse(cx, -28, 48, 34);
+    });
 
-    // Phase 1: arc pops in from ground
+    // Pop in from the ground, float up while the arc fades, then fade the clouds
     this.tweens.add({
-      targets: g, scale: 1, duration: 350, ease: 'Back.easeOut',
+      targets: [g, clouds], scale: 1, duration: 350, ease: 'Back.easeOut',
       onComplete: () => {
-        // Phase 2: cloud forms at apex
         this.tweens.add({
-          targets: cloudG, alpha: 1, scale: 1,
-          duration: 320, ease: 'Back.easeOut',
-        });
-        // Phase 3: arc rises toward cloud and fades
-        this.tweens.add({
-          targets: g,
-          y: groundY - outerR, // base of arc floats up to where apex started
-          alpha: 0,
+          targets: [g, clouds],
+          y: groundY - outerR,
           delay: 380,
           duration: 750,
           ease: 'Sine.easeIn',
+        });
+        this.tweens.add({
+          targets: g, alpha: 0,
+          delay: 380, duration: 750, ease: 'Sine.easeIn',
           onComplete: () => { if (g.active) g.destroy(); },
         });
-        // Phase 4: cloud puffs out then fades
         this.tweens.add({
-          targets: cloudG,
-          scaleX: 1.6, scaleY: 0.6, alpha: 0,
-          delay: 900,
-          duration: 500,
-          ease: 'Sine.easeIn',
-          onComplete: () => { if (cloudG.active) cloudG.destroy(); },
+          targets: clouds, alpha: 0,
+          delay: 380 + 750, duration: 250, ease: 'Sine.easeOut',
+          onComplete: () => { if (clouds.active) clouds.destroy(); },
         });
       },
     });
   }
-
-  // ─── Upgrade Menu ─────────────────────────────────────────────────────────
 
   private showUpgradeMenu(): void {
     if (this.upgradeMenuOpen) return;

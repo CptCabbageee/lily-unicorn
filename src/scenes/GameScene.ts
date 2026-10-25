@@ -60,7 +60,6 @@ export class GameScene extends Phaser.Scene {
 
   // Camera zoom — game world only; HUD stays fixed on a second camera
   private uiCamera: Phaser.Cameras.Scene2D.Camera | null = null;
-  private currentZoom = 1.0;
 
   // Poop — base values modified by upgrades
   private poopGroup!: Phaser.Physics.Arcade.Group;
@@ -105,8 +104,16 @@ export class GameScene extends Phaser.Scene {
   private readonly GROUND_Y = 508;
   private readonly GROUND_H = 32;
   private readonly TILE_W = 64;
-  // At zoom 0.35 the view reaches 480/0.35 - 480 ≈ 892 px past each edge
+  // Fixed world-camera zoom: the zoom a normal jump used to zoom out to, so the
+  // whole jump fits on screen without the camera ever moving.
+  private readonly ZOOM = 0.65;
+  // World x range the camera shows. It zooms around the screen centre (x = 480).
+  private readonly VIEW_LEFT  = 480 - 480 / this.ZOOM;  // ≈ -258
+  private readonly VIEW_RIGHT = 480 + 480 / this.ZOOM;  // ≈ 1218
+  // Floor extends this far past both screen edges, comfortably beyond the view
   private readonly GROUND_MARGIN = 960;
+  // Poo textures are 128 px square with the poo's visible bottom 48 px below centre
+  private readonly POOP_BOTTOM_OFFSET = 48;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -126,7 +133,6 @@ export class GameScene extends Phaser.Scene {
     this.isJumping = false;
     this.jumpPoopFired = false;
     this.landedPoops = new Set();
-    this.currentZoom = 1.0;
 
     const diff = (this.registry.get('difficulty') as Difficulty) || 'easy';
     this.applyDifficulty(diff);
@@ -229,11 +235,10 @@ export class GameScene extends Phaser.Scene {
     this.uiCamera.ignore(world);       // UI cam never sees game-world objects
     this.cameras.main.ignore(hud);     // Main cam never sees HUD objects
 
-    this.cameras.main.setZoom(1.0);
+    this.cameras.main.setZoom(this.ZOOM);
   }
 
-  // The camera sits at zoom=1, zooms out in tryJump() so the jump stays in view,
-  // and zooms back to 1 on landing in checkGrounded().
+  // The world camera stays at the fixed ZOOM for the whole game.
 
   // ─── Setup ────────────────────────────────────────────────────────────────
 
@@ -556,11 +561,11 @@ export class GameScene extends Phaser.Scene {
   }
 
   private updateCloudLayers(dt: number): void {
-    const viewRight = 960 / this.cameras.main.zoom;
+    const viewRight = this.VIEW_RIGHT;
     this.cloudLayers.forEach(layer => {
       layer.sprites.forEach(cloud => {
         cloud.x -= layer.speed * dt;
-        if (cloud.x < -200) {
+        if (cloud.x < this.VIEW_LEFT - 200) {
           cloud.x = viewRight + Phaser.Math.Between(0, 400);
           cloud.y = Phaser.Math.Between(-120, 240);
         }
@@ -600,18 +605,6 @@ export class GameScene extends Phaser.Scene {
       this.jumpInitialVelocity = this.jumpVelocity;
       this.jumpPoopFired = false;
       this.isJumping = true;
-      const jumpHeight = (this.jumpVelocity * this.jumpVelocity) / (2 * 800);
-      const maxApexY = this.unicorn.y - jumpHeight;
-      // Use 2× jump height as sky margin so requiredZoom is always < 1 (genuine
-      // zoom-out), scaling naturally with jump upgrades. The viewport-top gate was
-      // removed because it never fired for normal jump heights (apex stays in view).
-      const visibleWorldHeight = (this.GROUND_Y + this.GROUND_H) - (maxApexY - jumpHeight * 2);
-      const requiredZoom = Math.max(540 / visibleWorldHeight, 0.35);
-      if (requiredZoom < this.currentZoom - 0.01) {
-        this.currentZoom = requiredZoom;
-        this.tweens.killTweensOf(this.cameras.main);
-        this.tweens.add({ targets: this.cameras.main, zoom: requiredZoom, duration: 400, ease: 'Sine.easeOut' });
-      }
     } catch (e) {
       console.error('[Jump] tryJump error:', e);
     }
@@ -633,6 +626,12 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  // Texture of the poo style picked on the start screen
+  private pooKey(): string {
+    const key = this.registry.get('pooStyle') as string | undefined;
+    return key && this.textures.exists(key) ? key : 'poop';
+  }
+
   private spawnJumpPoop(): void {
     try {
       if (this.isGameOver) return;
@@ -640,7 +639,7 @@ export class GameScene extends Phaser.Scene {
       const poop = this.poopGroup.create(
         this.unicorn.x - 75,
         this.unicorn.y - 100,
-        'poop'
+        this.pooKey()
       ) as Phaser.Physics.Arcade.Image;
       poop.setScale(0.75);
       (poop.body as Phaser.Physics.Arcade.Body).setSize(96, 96);
@@ -667,7 +666,7 @@ export class GameScene extends Phaser.Scene {
     const poop = this.poopGroup.create(
       this.unicorn.x - 75,
       this.unicorn.y - 80,
-      'poop'
+      this.pooKey()
     ) as Phaser.Physics.Arcade.Image;
     // Charged poop is 2× regular 3× size
     poop.setScale(1.5);
@@ -692,7 +691,9 @@ export class GameScene extends Phaser.Scene {
       }
       poop.setAngle(0);
       this.physics.world.disable(poop);
-      // Keep origin (0.5, 0.5) — poop.png fills its canvas so body bottom = visual bottom
+      // The physics body doesn't match the drawn poo (charged poos' body is much
+      // bigger), so sit the visible bottom of the poo exactly on the ground.
+      poop.y = this.GROUND_Y - this.POOP_BOTTOM_OFFSET * poop.scaleY;
       this.landedPoops.add(poop);
     });
 
@@ -725,7 +726,7 @@ export class GameScene extends Phaser.Scene {
 
   private addPoopTrail(poop: Phaser.Physics.Arcade.Image): void {
     const colours = [0xff0000, 0xff8800, 0xffff00, 0x00cc00, 0x0066ff, 0x6600cc, 0xcc00cc];
-    const emitter = this.add.particles(poop.x, poop.y, 'poop', {
+    const emitter = this.add.particles(poop.x, poop.y, this.pooKey(), {
       follow: poop, lifespan: 400, speed: { min: 10, max: 40 },
       scale: { start: 0.6, end: 0 }, alpha: { start: 0.8, end: 0 },
       tint: colours, quantity: 2, frequency: 30,
@@ -738,15 +739,7 @@ export class GameScene extends Phaser.Scene {
   private checkGrounded(): void {
     const body = this.unicorn.body as Phaser.Physics.Arcade.Body;
     if (body.blocked.down && body.velocity.y >= 0) {
-      if (this.isJumping) {
-        console.log('[Jump] landing');
-        // Zoom back in after the jump's zoom-out
-        if (this.currentZoom < 1) {
-          this.currentZoom = 1;
-          this.tweens.killTweensOf(this.cameras.main);
-          this.tweens.add({ targets: this.cameras.main, zoom: 1, duration: 400, ease: 'Sine.easeInOut' });
-        }
-      }
+      if (this.isJumping) console.log('[Jump] landing');
       this.isGrounded = true;
       this.isJumping = false;
       this.jumpPoopFired = false;
@@ -757,7 +750,7 @@ export class GameScene extends Phaser.Scene {
 
   private cleanupPoops(): void {
     (this.poopGroup.getChildren() as Phaser.Physics.Arcade.Image[]).forEach(p => {
-      if (p.x > 1100 || p.y > 600 || p.x < -50) {
+      if (p.x > this.VIEW_RIGHT + 100 || p.y > 600 || p.x < this.VIEW_LEFT - 100) {
         this.landedPoops.delete(p);
         this.destroyPoop(p);
       }
@@ -869,7 +862,7 @@ export class GameScene extends Phaser.Scene {
       if (!obs.sprite.active) { this.obstacles.splice(i, 1); continue; }
       obs.sprite.x -= this.scrollSpeed * dt;
       (obs.sprite.body as Phaser.Physics.Arcade.Body).reset(obs.sprite.x, obs.sprite.y);
-      if (obs.sprite.x < -200) {
+      if (obs.sprite.x < this.VIEW_LEFT - 200) {
         obs.sprite.destroy();
         this.obstacles.splice(i, 1);
       }
@@ -896,7 +889,8 @@ export class GameScene extends Phaser.Scene {
     const cfg = configs[type];
 
     const SINK = 25;
-    const obs = this.physics.add.image(1020, this.GROUND_Y + SINK, cfg.key) as Phaser.Physics.Arcade.Image;
+    // Spawn just past the right edge of the view so trees never pop into sight
+    const obs = this.physics.add.image(this.VIEW_RIGHT + 150, this.GROUND_Y + SINK, cfg.key) as Phaser.Physics.Arcade.Image;
     obs.setOrigin(0.5, 1);
     obs.setDisplaySize(cfg.dW, cfg.dH);
     obs.setImmovable(true);
@@ -979,7 +973,7 @@ export class GameScene extends Phaser.Scene {
     this.time.delayedCall(500, () => { if (glitter.active) glitter.destroy(); });
 
     // Poop confetti — rainbow poop chunks arcing outward
-    const confetti = this.add.particles(x, y, 'poop', {
+    const confetti = this.add.particles(x, y, this.pooKey(), {
       lifespan: 900,
       speed: { min: 60 * m, max: 240 * m },
       scale: { start: 0.35 * m, end: 0.05 },

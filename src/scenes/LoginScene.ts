@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { supabase, loadProgress } from '../lib/supabase';
 import { nextColor, resetColors } from '../lib/colors';
+import { POO_STYLES, loadPooStyle, makePooTextures, savePooStyle } from '../lib/poos';
 
 type Difficulty = 'easy' | 'medium' | 'hard';
 
@@ -15,10 +16,13 @@ export class LoginScene extends Phaser.Scene {
 
   preload(): void {
     this.load.image('splash', 'assets/splash-new.png');
+    this.load.image('poop',   'assets/poop.png');  // Classic poo, for the poo picker
   }
 
   create(): void {
     resetColors();
+    makePooTextures(this);
+    if (!this.registry.get('pooStyle')) this.registry.set('pooStyle', loadPooStyle());
     this.createBackground();
     this.createTitle();
     void this.checkSession();
@@ -276,6 +280,50 @@ export class LoginScene extends Phaser.Scene {
 
   // ─── Difficulty selector (Phaser graphics, no DOM needed) ─────────────────
 
+  // Row of poo styles above the difficulty pills. Tapping one picks it (it
+  // doesn't start the game) and it's remembered for next time.
+  private showPooPicker(): void {
+    this.add.text(480, 186, 'PICK YOUR POO', {
+      fontSize: '20px', fontFamily: 'Lilita One, cursive',
+      color: nextColor(), stroke: '#000000', strokeThickness: 3,
+    }).setOrigin(0.5).setDepth(6);
+
+    const size = 82, gap = 96, cy = 246;
+    const frames: Array<{ key: string; g: Phaser.GameObjects.Graphics }> = [];
+    const refresh = () => {
+      const chosen = this.registry.get('pooStyle') as string;
+      frames.forEach(({ key, g }) => {
+        const on = key === chosen;
+        g.clear();
+        g.fillStyle(on ? 0xff4f9a : 0x000000, on ? 0.85 : 0.45);
+        g.fillRoundedRect(-size / 2, -size / 2, size, size, 16);
+        g.lineStyle(on ? 4 : 1, on ? 0xffffff : 0xaaaaaa, 1);
+        g.strokeRoundedRect(-size / 2, -size / 2, size, size, 16);
+      });
+    };
+
+    POO_STYLES.forEach((style, i) => {
+      const cx = 480 + (i - (POO_STYLES.length - 1) / 2) * gap;
+      const g = this.add.graphics().setPosition(cx, cy).setDepth(6);
+      frames.push({ key: style.key, g });
+
+      this.add.image(cx, cy - 8, style.key).setScale(0.48).setDepth(7);
+      this.add.text(cx, cy + 30, style.name, {
+        fontSize: '12px', fontFamily: 'Bubblegum Sans, cursive',
+        color: '#ffffff', stroke: '#000000', strokeThickness: 3,
+      }).setOrigin(0.5).setDepth(8);
+
+      this.add.rectangle(cx, cy, size, size, 0x000000, 0)
+        .setDepth(8).setInteractive({ useHandCursor: true })
+        .on('pointerdown', () => {
+          this.registry.set('pooStyle', style.key);
+          savePooStyle(style.key);
+          refresh();
+        });
+    });
+    refresh();
+  }
+
   private showDifficultySelector(): void {
     const lastDiff = (this.registry.get('difficulty') as Difficulty | undefined) || 'easy';
 
@@ -285,6 +333,8 @@ export class LoginScene extends Phaser.Scene {
       this.registry.set('difficulty', lastDiff);
       this.scene.start('PreloadScene');
     });
+
+    this.showPooPicker();
 
     this.add.text(480, 310, 'SELECT DIFFICULTY', {
       fontSize: '22px', fontFamily: 'Lilita One, cursive',

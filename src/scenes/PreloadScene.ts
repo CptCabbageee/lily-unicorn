@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { makePooTextures } from '../lib/poos';
 
 export class PreloadScene extends Phaser.Scene {
   constructor() {
@@ -18,6 +19,7 @@ export class PreloadScene extends Phaser.Scene {
     this.makeGround();
     this.makeCloud();
     this.makeSparkle();
+    makePooTextures(this);
     this.scene.start('GameScene');
   }
 

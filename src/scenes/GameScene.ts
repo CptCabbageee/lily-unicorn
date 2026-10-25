@@ -288,7 +288,10 @@ export class GameScene extends Phaser.Scene {
     this.unicorn.setGravityY(0);
     this.unicorn.setScale(3);
     this.unicorn.setCollideWorldBounds(true);
-    (this.unicorn.body as Phaser.Physics.Arcade.Body).setOffset(0, -6);
+    // Each 68 px frame has empty rows below the hooves (they end on rows 51–56),
+    // so lift the body to end at row 55: the hooves then run on the ground
+    // instead of hovering. Offsets are in frame pixels (scaled ×3).
+    (this.unicorn.body as Phaser.Physics.Arcade.Body).setOffset(0, 55 - 68);
     this.unicorn.setDepth(4);
     this.unicorn.play('unicorn-run');
 

@@ -5,6 +5,10 @@ import { POO_STYLES, loadPooStyle, makePooTextures, savePooStyle } from '../lib/
 
 type Difficulty = 'easy' | 'medium' | 'hard';
 
+// The start-screen picture has Lily and the unicorn in its left third, so the
+// poo picker and difficulty buttons sit in a column on the right, centred here.
+const MENU_X = 730;
+
 const SIGN_IN_ENABLED = false;
 
 export class LoginScene extends Phaser.Scene {
@@ -283,12 +287,13 @@ export class LoginScene extends Phaser.Scene {
   // Row of poo styles above the difficulty pills. Tapping one picks it (it
   // doesn't start the game) and it's remembered for next time.
   private showPooPicker(): void {
-    this.add.text(480, 186, 'PICK YOUR POO', {
+    this.add.text(MENU_X, 140, 'PICK YOUR POO', {
       fontSize: '20px', fontFamily: 'Lilita One, cursive',
       color: nextColor(), stroke: '#000000', strokeThickness: 3,
     }).setOrigin(0.5).setDepth(6);
 
-    const size = 82, gap = 96, cy = 246;
+    // 3 × 2 grid
+    const size = 82, gap = 96, cols = 3, top = 196;
     const frames: Array<{ key: string; g: Phaser.GameObjects.Graphics }> = [];
     const refresh = () => {
       const chosen = this.registry.get('pooStyle') as string;
@@ -303,7 +308,8 @@ export class LoginScene extends Phaser.Scene {
     };
 
     POO_STYLES.forEach((style, i) => {
-      const cx = 480 + (i - (POO_STYLES.length - 1) / 2) * gap;
+      const cx = MENU_X + ((i % cols) - (cols - 1) / 2) * gap;
+      const cy = top + Math.floor(i / cols) * gap;
       const g = this.add.graphics().setPosition(cx, cy).setDepth(6);
       frames.push({ key: style.key, g });
 
@@ -336,27 +342,27 @@ export class LoginScene extends Phaser.Scene {
 
     this.showPooPicker();
 
-    this.add.text(480, 310, 'SELECT DIFFICULTY', {
+    this.add.text(MENU_X, 362, 'SELECT DIFFICULTY', {
       fontSize: '22px', fontFamily: 'Lilita One, cursive',
       color: nextColor(), stroke: '#000000', strokeThickness: 3,
     }).setOrigin(0.5).setDepth(6);
 
     const diffLabel = lastDiff.toUpperCase();
-    this.add.text(480, 510, `SPACE — start as ${diffLabel}  •  or tap a difficulty below`, {
+    this.add.text(MENU_X, 508, `SPACE — start as ${diffLabel}  •  or tap a difficulty below`, {
       fontSize: '14px', fontFamily: 'Bubblegum Sans, cursive',
       color: '#ffdd88', stroke: '#000000', strokeThickness: 2,
     }).setOrigin(0.5).setDepth(6);
 
     const diffs: Array<{ cx: number; label: string; desc: string; col: number; key: Difficulty }> = [
-      { cx: 240, label: 'EASY',   desc: '200 px/s  •  2–3.5 s',   col: 0x1a8833, key: 'easy'   },
-      { cx: 480, label: 'MEDIUM', desc: '600 px/s  •  1.2–2 s',   col: 0xcc7700, key: 'medium' },
-      { cx: 720, label: 'HARD',   desc: '1200 px/s •  0.6–1 s',   col: 0xcc2222, key: 'hard'   },
+      { cx: MENU_X - 142, label: 'EASY',   desc: '200 px/s  •  2–3.5 s',   col: 0x1a8833, key: 'easy'   },
+      { cx: MENU_X,       label: 'MEDIUM', desc: '600 px/s  •  1.2–2 s',   col: 0xcc7700, key: 'medium' },
+      { cx: MENU_X + 142, label: 'HARD',   desc: '1200 px/s •  0.6–1 s',   col: 0xcc2222, key: 'hard'   },
     ];
 
     diffs.forEach(d => {
       const isSelected = d.key === lastDiff;
-      const w = 220, h = 100, r = 18;
-      const ly = 355, lx = d.cx - w / 2;
+      const w = 132, h = 84, r = 16;
+      const ly = 384, lx = d.cx - w / 2;
 
       // Rounded pill visual
       const g = this.add.graphics().setDepth(6).setAlpha(isSelected ? 1 : 0.38);
@@ -366,7 +372,7 @@ export class LoginScene extends Phaser.Scene {
       g.strokeRoundedRect(lx, ly, w, h, r);
 
       // Invisible interactive hitbox aligned over the pill
-      const hit = this.add.rectangle(d.cx, 405, w, h, 0x000000, 0)
+      const hit = this.add.rectangle(d.cx, ly + h / 2, w, h, 0x000000, 0)
         .setDepth(7).setInteractive({ useHandCursor: true });
       hit.on('pointerover', () => g.setAlpha(isSelected ? 1 : 0.72));
       hit.on('pointerout',  () => g.setAlpha(isSelected ? 1 : 0.38));
@@ -375,18 +381,18 @@ export class LoginScene extends Phaser.Scene {
         this.scene.start('PreloadScene');
       });
 
-      this.add.text(d.cx, 388, d.label, {
+      this.add.text(d.cx, ly + 24, d.label, {
         fontSize: '24px', fontFamily: 'Lilita One, cursive',
         color: isSelected ? '#ffffff' : '#aaaaaa', stroke: '#000000', strokeThickness: 4,
       }).setOrigin(0.5).setDepth(8);
 
-      this.add.text(d.cx, 420, d.desc, {
-        fontSize: '13px', fontFamily: 'Bubblegum Sans, cursive',
+      this.add.text(d.cx, ly + 52, d.desc, {
+        fontSize: '11px', fontFamily: 'Bubblegum Sans, cursive',
         color: isSelected ? '#ffeecc' : '#777777',
       }).setOrigin(0.5).setDepth(8);
 
       if (isSelected) {
-        this.add.text(d.cx, 443, '▲ SELECTED', {
+        this.add.text(d.cx, ly + 72, '▲ SELECTED', {
           fontSize: '10px', fontFamily: 'Bubblegum Sans, cursive', color: '#ffdd00',
         }).setOrigin(0.5).setDepth(8);
       }

@@ -4,6 +4,8 @@ import { nextColor, resetColors } from '../lib/colors';
 
 type Difficulty = 'easy' | 'medium' | 'hard';
 
+const SIGN_IN_ENABLED = false;
+
 export class LoginScene extends Phaser.Scene {
   private loginFormEl: HTMLElement | null = null;
 
@@ -63,6 +65,16 @@ export class LoginScene extends Phaser.Scene {
   // ─── Auth flow ────────────────────────────────────────────────────────────
 
   private async checkSession(): Promise<void> {
+    // Sign-in is switched off: the Supabase project is paused and the free plan
+    // has no spare project slot to restore it, so everyone plays as a guest. Set SIGN_IN_ENABLED back
+    // to true (and point .env.local at a live project) to bring logins back.
+    if (!SIGN_IN_ENABLED) {
+      this.registry.set('guestMode', true);
+      this.registry.set('userId', null);
+      this.showDifficultySelector();
+      return;
+    }
+
     // Fast paths — no async needed when we already know who the player is
     if (this.registry.get('guestMode')) {
       this.showDifficultySelector();
